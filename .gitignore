@@ -1,0 +1,24 @@
+# Kunci privat — JANGAN pernah di-commit
+*.pem
+*private*.key
+*secret*
+
+# Konfigurasi lokal (password DB, dll)
+includes/config.local.php
+.env
+
+# Log error
+*.log
+error_log
+
+# Direktori sistem / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.bak
+
+# Direktori vendor / composer (tidak dipakai di proyek ini)
+vendor/
+composer.lock
