@@ -11,7 +11,8 @@ require_once __DIR__ . '/../includes/layout.php';
 security_headers();
 require_login();
 
-$pdo = db();
+$pdo      = db();
+$keyValid = has_valid_keys();
 
 // Statistik
 $totalMahasiswa = (int)$pdo->query("SELECT COUNT(*) FROM mahasiswa")->fetchColumn();
@@ -57,6 +58,7 @@ render_admin_layout_start('Dashboard', 'dashboard');
 
 <!-- Aksi cepat -->
 <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:24px">
+    <?php if ($keyValid): ?>
     <a href="<?= BASE_URL ?>/admin/mahasiswa.php?action=add" class="btn btn-primary">
         <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="6" r="3" stroke="currentColor" stroke-width="1.5"/><path d="M2 14c0-3.314 2.686-6 6-6s6 2.686 6 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M13 1v4M11 3h4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
         Tambah Mahasiswa
@@ -69,10 +71,11 @@ render_admin_layout_start('Dashboard', 'dashboard');
         <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.5"/><path d="M8 5v6M5 8h6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
         Isi Data Contoh
     </button>
+    <?php endif; ?>
     <a href="<?= BASE_URL ?>/admin/inspector.php" class="btn btn-ghost">
         <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="7" cy="7" r="4.5" stroke="currentColor" stroke-width="1.5"/><path d="M11 11l3 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
         Crypto Inspector
-    </button>
+    </a>
 </div>
 
 <!-- Info enkripsi -->
@@ -80,17 +83,15 @@ render_admin_layout_start('Dashboard', 'dashboard');
     <h3 style="font-size:15px;font-weight:700;margin-bottom:12px">Status Enkripsi Sesi</h3>
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;font-size:13px">
         <div>
-            <div style="color:var(--text-muted);font-size:11px;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:3px">K_sym (K) dimuat</div>
-            <div style="color:var(--success);font-weight:600;display:flex;align-items:center;gap:6px">
-                <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="5.5" stroke="currentColor" stroke-width="1.3"/><path d="M4.5 7l2 2 3-3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                Ya — sesi aktif
+            <div style="color:var(--text-muted);font-size:11px;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:3px">Mode tampilan</div>
+            <div style="color:<?= $keyValid ? 'var(--success)' : 'var(--cipher)' ?>;font-weight:600">
+                <?= $keyValid ? 'Plaintext tersedia' : 'Terenkripsi (ciphertext saja)' ?>
             </div>
         </div>
         <div>
-            <div style="color:var(--text-muted);font-size:11px;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:3px">Kunci privat dimuat</div>
-            <div style="color:var(--success);font-weight:600;display:flex;align-items:center;gap:6px">
-                <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="5.5" stroke="currentColor" stroke-width="1.3"/><path d="M4.5 7l2 2 3-3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                Ya — di memori sesi
+            <div style="color:var(--text-muted);font-size:11px;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:3px">Kunci sesi</div>
+            <div style="color:<?= $keyValid ? 'var(--success)' : 'var(--danger)' ?>;font-weight:600">
+                <?= $keyValid ? 'K_sym + kunci privat valid' : 'Tidak valid — tidak dimuat' ?>
             </div>
         </div>
         <div>

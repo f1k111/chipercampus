@@ -24,6 +24,13 @@ if (!is_logged_in()) {
 // Wajib CSRF
 require_csrf();
 
+// Mode terenkripsi: kunci tidak valid, dekripsi ditolak
+if (!has_valid_keys()) {
+    http_response_code(403);
+    echo json_encode(['ok' => false, 'msg' => 'Kunci tidak valid — data tetap terenkripsi.']);
+    exit;
+}
+
 // Ambil body JSON
 $body = json_decode(file_get_contents('php://input'), true);
 if (!$body) {

@@ -160,7 +160,8 @@ erDiagram
 ### Login (Verifikasi 2 Kunci)
 1. **Simetris**: dekripsi `sym_check` dengan K_sym → bandingkan dengan magic string
 2. **Asimetris**: dekripsi RSA challenge dengan kunci privat → bandingkan hash
-3. Login berhasil hanya jika keduanya lolos. Pesan error generik.
+3. Jika keduanya lolos → **mode plaintext**: data bisa didekripsi, ditambah, diubah, dihapus.
+4. Jika salah satu gagal → tetap masuk, tetapi dalam **mode terenkripsi**: semua data hanya tampil sebagai ciphertext, dekripsi dan perubahan data ditolak (juga di API). Kunci yang salah tidak disimpan di sesi. Tidak ada informasi kunci mana yang salah.
 
 ### Catatan Teknis Jujur
 - **OAEP SHA-1**: PHP menggunakan SHA-1 untuk RSA-OAEP (bawaan). Di produksi, SHA-256 lebih dianjurkan.
@@ -189,7 +190,7 @@ ciphercampus/
 │   ├── config.php         # Konfigurasi & konstanta
 │   ├── db.php             # PDO singleton
 │   ├── crypto.php         # class CryptoService
-│   ├── auth.php           # Login, guard, CSRF, rate limit
+│   ├── auth.php           # Login, guard, CSRF, mode terenkripsi
 │   └── layout.php         # Komponen header/sidebar/footer
 ├── assets/
 │   ├── css/main.css       # Stylesheet utama (dark-first)

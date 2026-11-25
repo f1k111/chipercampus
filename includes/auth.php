@@ -57,18 +57,6 @@ function is_logged_in(): bool
     return true;
 }
 
-// --- Rate limit: max 5 gagal per IP per 10 menit ---
-function check_rate_limit(string $ip): bool
-{
-    $pdo = db();
-    $stmt = $pdo->prepare(
-        "SELECT COUNT(*) FROM login_log
-         WHERE ip = ? AND status = 'failed' AND created_at > DATE_SUB(NOW(), INTERVAL 10 MINUTE)"
-    );
-    $stmt->execute([$ip]);
-    return (int)$stmt->fetchColumn() < 5;
-}
-
 function log_login_attempt(string $ip, string $status): void
 {
     $pdo = db();
@@ -80,25 +68,12 @@ function log_login_attempt(string $ip, string $status): void
     }
 }
 
-function get_failed_count(string $ip): int
-{
-    $pdo  = db();
-    $stmt = $pdo->prepare(
-        "SELECT COUNT(*) FROM login_log
-         WHERE ip = ? AND status = 'failed' AND created_at > DATE_SUB(NOW(), INTERVAL 10 MINUTE)"
-    );
-    $stmt->execute([$ip]);
-    return (int)$stmt->fetchColumn();
-}
-
 // --- Proses login dua kunci ---
+// Kunci benar  -> mode plaintext (data bisa didekripsi & diubah)
+// Kunci salah  -> tetap masuk, tapi mode terenkripsi (hanya ciphertext, read-only)
 function attempt_login(string $kSymHex, string $privPem): array
 {
     $ip = $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0';
-
-    if (!check_rate_limit($ip)) {
-        return ['ok' => false, 'error' => 'rate_limit', 'msg' => 'Terlalu banyak percobaan. Tunggu 10 menit.'];
-    }
 
     // Ambil kunci dari DB
     $pdo  = db();
@@ -135,23 +110,30 @@ function attempt_login(string $kSymHex, string $privPem): array
         error_log('Login error: ' . $e->getMessage());
     }
 
-    if (!$ok) {
-        log_login_attempt($ip, 'failed');
-        return ['ok' => false, 'error' => 'invalid', 'msg' => 'Kunci tidak valid.'];
-    }
-
-    // Login berhasil
-    log_login_attempt($ip, 'success');
+    log_login_attempt($ip, $ok ? 'success' : 'failed');
     session_regenerate_id(true);
 
-    // Simpan kunci di sesi (kompromi edukasi - dicatat di README)
     $_SESSION['logged_in']   = true;
-    $_SESSION['k_sym_hex']   = $kSymHex;   // K_sym sebagai hex
-    $_SESSION['priv_pem']    = $privPem;   // Kunci privat RSA
+    $_SESSION['key_valid']   = $ok;
     $_SESSION['last_active'] = time();
     $_SESSION['login_time']  = time();
 
-    return ['ok' => true];
+    if ($ok) {
+        // Simpan kunci di sesi (kompromi edukasi - dicatat di README)
+        $_SESSION['k_sym_hex'] = $kSymHex;
+        $_SESSION['priv_pem']  = $privPem;
+    } else {
+        // Kunci salah tidak pernah disimpan; sesi hanya bisa melihat ciphertext
+        unset($_SESSION['k_sym_hex'], $_SESSION['priv_pem']);
+    }
+
+    return ['ok' => true, 'key_valid' => $ok];
+}
+
+// --- Apakah sesi memegang kunci yang valid (mode plaintext)? ---
+function has_valid_keys(): bool
+{
+    return !empty($_SESSION['key_valid']);
 }
 
 // --- Ambil kunci dari sesi ---

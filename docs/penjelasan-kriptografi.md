@@ -83,8 +83,13 @@ Server verifikasi:
     coba dekripsi rsa_challenge_ct dengan privat yang diinput
     hash(hasil) == rsa_challenge_hash? → kunci privat benar
 
-  Login berhasil hanya jika KEDUA cek lolos.
-  Pesan error: "Kunci tidak valid" (tidak bocorkan kunci mana yang salah)
+  KEDUA cek lolos  → masuk mode PLAINTEXT (kunci disimpan di sesi, data bisa dibuka & diubah)
+  Salah satu gagal → tetap masuk, mode TERENKRIPSI:
+    - kunci tidak disimpan di sesi
+    - semua tabel hanya menampilkan ciphertext
+    - dekripsi, tambah, ubah, hapus, dan seed ditolak (server-side)
+    - tidak ada info kunci mana yang salah
+  Ini menunjukkan bahwa tanpa kunci yang benar, isi database memang tidak bisa dibaca.
 ```
 
 ## 5. Properti Keamanan

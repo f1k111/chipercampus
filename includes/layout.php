@@ -103,6 +103,13 @@ function render_admin_layout_start(string $pageTitle = '', string $activeNav = '
             </div>
         </header>
 
+        <?php if (!has_valid_keys()): ?>
+        <div class="cipher-banner" role="status">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style="flex-shrink:0"><rect x="3" y="7" width="10" height="7" rx="1.5" stroke="currentColor" stroke-width="1.4"/><path d="M5 7V5a3 3 0 016 0v2" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+            <span><strong>Mode Terenkripsi.</strong> Kunci yang dimasukkan tidak valid, jadi semua data hanya tampil sebagai ciphertext. Dekripsi dan perubahan data dinonaktifkan. <a href="<?= BASE_URL ?>/logout.php">Login ulang dengan kunci yang benar</a>.</span>
+        </div>
+        <?php endif; ?>
+
         <!-- Content area -->
         <main class="admin-content">
     <?php

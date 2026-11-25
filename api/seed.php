@@ -20,6 +20,12 @@ if (!is_logged_in()) {
 
 require_csrf();
 
+if (!has_valid_keys()) {
+    http_response_code(403);
+    echo json_encode(['ok' => false, 'msg' => 'Mode terenkripsi: kunci tidak valid.']);
+    exit;
+}
+
 $kSym   = session_k_sym();
 $pubKey = session_pub_key();
 $pdo    = db();

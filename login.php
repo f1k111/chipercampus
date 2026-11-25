@@ -24,16 +24,11 @@ if (!$hasKeys) {
     exit;
 }
 
-$error     = '';
-$rateLimit = false;
-$ip        = $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0';
+$error = '';
 
-// Cek apakah sudah kena rate limit
-if (!check_rate_limit($ip)) {
-    $rateLimit = true;
-}
-
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$rateLimit) {
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && !verify_csrf()) {
+    $error = 'Sesi formulir kedaluwarsa. Muat ulang halaman lalu coba lagi.';
+} elseif ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $kSymHex = trim($_POST['k_sym']  ?? '');
     $privPem = trim($_POST['priv_pem'] ?? '');
 
@@ -45,26 +40,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$rateLimit) {
     $result = attempt_login($kSymHex, $privPem);
 
     if ($result['ok']) {
-        $next = $_GET['next'] ?? '';
-        // Validasi next URL harus dalam aplikasi kita
-        if (!str_starts_with($next, BASE_URL . '/admin/')) {
-            $next = BASE_URL . '/admin/dashboard.php';
-        }
-        header('Location: ' . $next);
+        header('Location: ' . BASE_URL . '/admin/dashboard.php');
         exit;
-    } else {
-        if ($result['error'] === 'rate_limit') {
-            $rateLimit = true;
-        } else {
-            $error = $result['msg'];
-        }
     }
-
-    // Refresh rate limit check
-    if (!check_rate_limit($ip)) $rateLimit = true;
+    $error = $result['msg'];
 }
-
-$failedCount = get_failed_count($ip);
 ?>
 <!DOCTYPE html>
 <html lang="id" data-theme="dark">
@@ -107,24 +87,10 @@ $failedCount = get_failed_count($ip);
             </div>
             <?php endif; ?>
 
-            <?php if ($rateLimit): ?>
-            <div class="auth-error">
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.5"/><path d="M6 6l4 4M10 6l-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
-                <div>
-                    <strong>Terlalu banyak percobaan gagal.</strong><br>
-                    Tunggu 10 menit sebelum mencoba lagi.
-                </div>
-            </div>
-
-            <?php else: ?>
-
             <?php if ($error): ?>
             <div class="auth-error" id="errorBox">
                 <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.5"/><path d="M6 6l4 4M10 6l-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
                 <?= htmlspecialchars($error, ENT_QUOTES) ?>
-                <?php if ($failedCount > 0): ?>
-                <div style="font-size:12px;margin-top:4px;opacity:0.8"><?= $failedCount ?>/5 percobaan</div>
-                <?php endif; ?>
             </div>
             <?php endif; ?>
 
@@ -182,8 +148,6 @@ $failedCount = get_failed_count($ip);
                     Masuk ke Admin
                 </button>
             </form>
-
-            <?php endif; ?>
         </div><!-- .auth-card -->
     </div>
 </div>

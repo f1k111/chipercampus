@@ -13,9 +13,10 @@ require_once __DIR__ . '/../includes/layout.php';
 security_headers();
 require_login();
 
-$pdo     = db();
-$kSym    = session_k_sym();
-$privPem = session_priv_pem();
+$pdo      = db();
+$keyValid = has_valid_keys();
+$kSym     = $keyValid ? session_k_sym() : '';
+$privPem  = $keyValid ? session_priv_pem() : '';
 
 $selectedTable = $_GET['table'] ?? 'mahasiswa';
 $selectedId    = (int)($_GET['id'] ?? 0);
@@ -42,7 +43,7 @@ if ($selectedId > 0) {
     $stmt->execute([$selectedId]);
     $inspectData = $stmt->fetch();
 
-    if ($inspectData) {
+    if ($inspectData && $keyValid) {
         try {
             if ($selectedTable === 'mahasiswa') {
                 $plain = CryptoService::decryptMahasiswa($inspectData, $privPem, $kSym);
@@ -104,6 +105,9 @@ render_admin_layout_start('Crypto Inspector', 'inspector');
         <h3 style="font-size:14px;font-weight:700;color:var(--accent);margin-bottom:14px;font-family:var(--font-mono)">
             → PLAINTEXT (terdekripsi)
         </h3>
+        <?php if (!$keyValid): ?>
+        <p style="font-size:13px;color:var(--cipher)">Tidak tersedia. Kunci yang dipakai login tidak valid, jadi DEK tidak bisa dibuka dan isi field tetap terenkripsi.</p>
+        <?php endif; ?>
         <?php foreach ($plainFields as $k => $v): ?>
         <?php if (in_array($k, ['id'])): continue; endif; ?>
         <div style="margin-bottom:10px">

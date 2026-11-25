@@ -12,14 +12,19 @@ require_once __DIR__ . '/../includes/layout.php';
 security_headers();
 require_login();
 
-$pdo     = db();
-$kSym    = session_k_sym();
-$privPem = session_priv_pem();
-$pubKey  = session_pub_key();
+$pdo      = db();
+$keyValid = has_valid_keys();
+$action   = $_GET['action'] ?? 'list';
+$error    = '';
 
-$action = $_GET['action'] ?? 'list';
-$error  = '';
-$success = '';
+// Mode terenkripsi: semua perubahan data ditolak
+if (!$keyValid && ($_SERVER['REQUEST_METHOD'] === 'POST' || in_array($action, ['add', 'edit', 'delete'], true))) {
+    header('Location: ' . BASE_URL . '/admin/mahasiswa.php?msg=locked');
+    exit;
+}
+
+$kSym   = $keyValid ? session_k_sym() : '';
+$pubKey = session_pub_key();
 
 // --- HAPUS ---
 if ($action === 'delete' && isset($_GET['id'])) {
@@ -115,6 +120,7 @@ $msgMap = [
     'added'   => ['Mahasiswa berhasil ditambahkan!', 'success'],
     'updated' => ['Data mahasiswa berhasil diperbarui!', 'success'],
     'deleted' => ['Mahasiswa berhasil dihapus.', 'info'],
+    'locked'  => ['Mode terenkripsi: perubahan data dinonaktifkan.', 'error'],
 ];
 $msg = $msgMap[$_GET['msg'] ?? ''] ?? null;
 
@@ -135,6 +141,7 @@ render_admin_layout_start('Data Mahasiswa', 'mahasiswa');
     </div>
     <div style="display:flex;gap:8px;align-items:center">
         <!-- Toggle ciphertext/plaintext -->
+        <?php if ($keyValid): ?>
         <label class="toggle-wrap" title="Toggle tampilan ciphertext/plaintext">
             <div class="toggle-switch">
                 <input type="checkbox" id="decryptToggle">
@@ -146,6 +153,9 @@ render_admin_layout_start('Data Mahasiswa', 'mahasiswa');
             <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 2v10M2 7h10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
             Tambah
         </button>
+        <?php else: ?>
+        <span class="badge badge-cipher">Terkunci · ciphertext saja</span>
+        <?php endif; ?>
     </div>
 </div>
 
@@ -189,6 +199,9 @@ render_admin_layout_start('Data Mahasiswa', 'mahasiswa');
                 </td>
                 <td style="font-size:12px;color:var(--text-dim)"><?= htmlspecialchars(date('d/m/y', strtotime($row['created_at'])), ENT_QUOTES) ?></td>
                 <td class="td-actions">
+                    <?php if (!$keyValid): ?>
+                    <span class="text-muted text-xs">—</span>
+                    <?php else: ?>
                     <div style="display:flex;gap:6px">
                         <a href="?action=edit&id=<?= $row['id'] ?>" class="btn btn-ghost btn-sm" title="Edit">
                             <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M9.5 1.5l2 2L4 11H2V9l7.5-7.5z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg>
@@ -199,11 +212,12 @@ render_admin_layout_start('Data Mahasiswa', 'mahasiswa');
                             <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M2 3.5h9M5 3.5V2h3v1.5M4 3.5v7h5v-7" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
                         </a>
                     </div>
+                    <?php endif; ?>
                 </td>
             </tr>
             <?php endforeach; ?>
             <?php if (empty($rows)): ?>
-            <tr><td colspan="7" style="text-align:center;padding:32px;color:var(--text-muted)">Belum ada data. <a href="#" onclick="CC.openModal('modalTambah');return false">Tambah mahasiswa</a>.</td></tr>
+            <tr><td colspan="7" style="text-align:center;padding:32px;color:var(--text-muted)">Belum ada data.<?php if ($keyValid): ?> <a href="#" onclick="CC.openModal('modalTambah');return false">Tambah mahasiswa</a>.<?php endif; ?></td></tr>
             <?php endif; ?>
         </tbody>
     </table>
